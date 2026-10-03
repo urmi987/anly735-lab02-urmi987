@@ -1,61 +1,27 @@
 # Analysis Directory
 
-This directory stores **generated analytical evidence** for Replication Laboratory #1.
+This directory stores generated evidence for **Replication Laboratory #2 —
+Can the Model Keep Learning?**
 
-After you successfully run either the Python or R analysis track, the script creates:
-
-```text
-lab01_results.csv
-```
-
-The file records:
-
-- evaluation design;
-- model;
-- RMSE; and
-- MAE.
-
-## Source Code vs. Generated Evidence
-
-The analysis scripts are the computational source:
+Running the analysis script creates:
 
 ```text
-python/lab01_analysis.py
-r/lab01_analysis.R
+lab02_learning_trajectory.csv
+lab02_summary.csv
 ```
 
-This directory contains evidence produced by running one of those scripts.
+`lab02_learning_trajectory.csv` records Task A and Task B accuracy after each
+Task B training batch for both agents.
 
-Students should **not manually edit `lab01_results.csv`** to obtain a preferred result.
+`lab02_summary.csv` records the compact stability-plasticity evidence:
 
-If the analysis changes, rerun the script and allow the evidence file to be regenerated.
+- initial Task A accuracy;
+- initial Task B accuracy;
+- final Task A accuracy;
+- final Task B accuracy;
+- Task A retention change;
+- Task B learning gain; and
+- batches required to reach 80 percent Task B accuracy.
 
-## Why Keep the Results File?
-
-Unlike downloaded source data, `lab01_results.csv` should remain in your GitHub repository.
-
-It provides a compact record of the evidence produced by your analytical environment and creates a traceable connection between:
-
-```text
-CODE → EXECUTION → EVIDENCE → INTERPRETATION → CLAIM
-```
-
-Your numerical results do not need to be identical to those produced by another programming language or software implementation.
-
-The central reproducibility question is whether the analytical workflow is transparent enough to investigate why results agree or differ.
-
-## Researcher Responsibility
-
-The CSV contains results.
-
-It does **not** contain the scientific conclusion.
-
-Your interpretation belongs in:
-
-```text
-replication-lab.qmd
-```
-
-Use the results to complete the FAIR Model Comparison Audit, defend your replication verdict, and establish the boundaries of your research claim.
-
-> **The script produces evidence. The researcher is responsible for the claim.**
+The script produces evidence. The interpretation belongs in
+`replication-lab.qmd`.

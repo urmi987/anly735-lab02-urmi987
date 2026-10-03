@@ -1,0 +1,3 @@
+agent,initial_task_a_accuracy,initial_task_b_accuracy,final_task_a_accuracy,final_task_b_accuracy,task_a_retention_change,task_b_learning_gain,batches_to_80pct_task_b
+previously_trained_stability_biased,0.997,0.489,0.980,0.516,-0.017,0.027,
+fresh_task_b_model,0.490,0.502,0.491,0.998,0.001,0.496,1

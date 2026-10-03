@@ -1,5 +1,5 @@
 # ============================================================
-# ANLY 735 — Replication Laboratory #1
+# ANLY 735 — Replication Laboratory #2
 # Git ignore rules
 # ============================================================
 
@@ -26,12 +26,6 @@ venv/
 Thumbs.db
 *.tmp
 *.log
-
-# Downloaded source data
-# The analysis scripts acquire these reproducibly.
-data/hour.csv
-data/Bike-Sharing-Dataset.zip
-data/day.csv
 
 # Rendered laboratory document
 # Students submit the Word document to Canvas; the reproducibility

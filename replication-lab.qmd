@@ -1,501 +1,117 @@
 ---
-title: "Replication Laboratory #1"
-subtitle: "Evaluation Design Matters"
-author: "ANLY 735 — Research Seminar in Predictive AI"
+title: "Replication Laboratory #2"
+subtitle: "Can the Model Keep Learning?"
+author: "Urmi"
+date: today
 format:
   docx:
     toc: true
     number-sections: true
-    reference-links: true
-execute:
-  echo: false
-  warning: false
-  message: false
+bibliography: references.bib
 ---
 
+# Study
 
+**Article:** Week 4 literature on stability, plasticity, and continued learning under changing conditions.
 
-# Laboratory Question
+**Authors:** Klein et al. and related Week 4 readings.
 
-> **Does changing the evaluation design change estimated predictive performance—and does it change which model appears stronger?**
+**DOI/URL:** Course literature.
 
-In this laboratory, you will investigate how a seemingly simple methodological choice—**how observations are divided into training and testing data**—can materially affect the evidence produced by a predictive model.
+**Replication Type:** Proxy replication.
 
-You will analyze the same prediction problem using the same dataset, same predictors, same models, and same evaluation metrics under two different evaluation designs:
+**Computational Environment:** Python.
 
-1. **Random evaluation** — training and testing observations are sampled without preserving temporal order.
-2. **Temporally structured evaluation** — earlier observations are used for training and later observations are reserved for testing.
+**Primary Packages:** None beyond the Python standard library.
 
-Your goal is not to prove that one design must always produce better or worse performance. Your goal is to determine what the evidence actually shows and whether your research claim changes when the evaluation design changes.
+**Random Seed:** 735.
 
-> **Do not chase a predetermined result. Investigate what the evidence actually supports.**
+**Repository:** https://github.com/urmi987/anly735-lab02-urmi987
 
-# Learning Objectives
+# 1. Research Claim
 
-By the end of this laboratory, you should be able to:
+This laboratory investigates the claim that learning behavior can change when the environment becomes nonstationary. The narrower claim tested here is that a model can retain a previously learned capability while becoming less effective at learning what comes next. This is a stability-plasticity problem: a highly stable model may preserve old performance, but that same stability can reduce its ability to adapt after conditions change. The goal is not to reproduce every result from the Week 4 literature. Instead, this report conducts a focused proxy replication using a controlled synthetic learning experiment that makes the change in conditions explicit and measurable.
 
-- distinguish random evaluation from temporally structured evaluation;
-- explain why evaluation design is part of the research design rather than merely a coding decision;
-- compare model performance using **RMSE** and **MAE**;
-- determine whether model ranking is stable across evaluation designs;
-- identify when an apparently strong predictive result may depend on the evaluation strategy;
-- assess whether an evaluation design matches the intended deployment scenario;
-- formulate a defensible replication verdict based on evidence; and
-- communicate what the evidence permits you to claim—and what it does not.
+# 2. Replication Strategy
 
-# Research Context
+This is a proxy replication because the experiment does not use the original data, model code, or full experimental design from the Week 4 literature. Instead, it tests the same conceptual pattern in a simpler setting where the data-generating rule is fully controlled. The replication compares a previously trained, stability-biased agent with a fresh agent after a sudden change in task conditions. The evidence is evaluated using the Stability-Plasticity Diagnostic: change, retention, new learning, rate, and tradeoff. This approach is meaningful because it directly separates a performance drop from the more important question: what happens to subsequent learning after the change?
 
-Predictive performance is not an intrinsic property of a model. It is estimated under a particular evaluation design.
+# 3. Data
 
-A model that performs well when observations are randomly divided between training and testing sets may perform differently when asked to predict observations that occur later in time. This matters whenever a real-world deployment requires a model trained on historical data to make predictions about future cases.
+The data are synthetic two-dimensional classification observations generated in Python with a fixed random seed. Each observation has two numeric predictors, `x1` and `x2`, and a binary class label. In Task A, the correct label is determined by whether `x1 + x2 > 0`. In Task B, the correct label is determined by whether `x1 - x2 > 0`. The move from Task A to Task B rotates the decision boundary and creates a controlled change in conditions. Because the data are generated by code, the experiment is reproducible without downloading or redistributing external data.
 
-This laboratory therefore treats **evaluation design as an experimental condition**.
+# 4. Method
 
-The central comparison is:
+The analysis uses a simple online logistic classifier implemented with gradient descent. First, the stability-biased agent is trained on Task A. Its Task A weights are then saved as an anchor. When the task changes to Task B, this agent continues learning from Task B batches, but its updates include a penalty for moving too far from the Task A solution. This represents a model that is biased toward retaining prior capability. A fresh comparison model starts with zero weights and trains only on Task B using the same incoming batches. Accuracy is measured on held-out Task A and Task B test sets after each Task B training batch. The main comparison is not only final performance, but the learning trajectory after the condition change.
 
-```text
-                     SAME PREDICTION PROBLEM
-                              |
-                +-------------+-------------+
-                |                           |
-         RANDOM EVALUATION          TEMPORAL EVALUATION
-                |                           |
-        Ridge Regression            Ridge Regression
-        Random Forest               Random Forest
-                |                           |
-           RMSE + MAE                  RMSE + MAE
-                |                           |
-                +-------------+-------------+
-                              |
-                       COMPARE EVIDENCE
-                              |
-                    DOES THE CLAIM CHANGE?
-```
+# 5. Results
 
-# Dataset
+| Agent | Initial Task A Accuracy | Initial Task B Accuracy | Final Task A Accuracy | Final Task B Accuracy | Task A Retention Change | Task B Learning Gain | Batches to 80% Task B |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Previously trained, stability-biased | 0.997 | 0.489 | 0.980 | 0.516 | -0.017 | 0.027 | Not reached |
+| Fresh Task B model | 0.490 | 0.502 | 0.491 | 0.998 | 0.001 | 0.496 | 1 |
 
-You will use the **UCI Bike Sharing Dataset**, which contains hourly bike-rental observations collected across 2011 and 2012.
+![Learning curves after the change in conditions.](figures/lab02_learning_curves.svg)
 
-The prediction outcome is:
+The results show a clear difference between retention and new learning. The previously trained, stability-biased agent begins with high Task A accuracy of 0.997, which indicates that it retained the original capability. However, its initial Task B accuracy is only 0.489 because the decision rule changed. During Task B training, it improves only slightly, ending at 0.516. The fresh model begins without Task A knowledge, but it learns the new task quickly and reaches 0.998 Task B accuracy by the end of the experiment.
 
-- `cnt` — total number of bike rentals in a given hour.
+# 6. Stability-Plasticity Diagnostic
 
-The analysis uses weather, calendar, and temporal predictors that could reasonably be available at prediction time.
+## Change
 
-## Variables Used
+The condition change is the move from Task A to Task B. In Task A, labels depend on `x1 + x2`; in Task B, labels depend on `x1 - x2`. This is not just random noise or a temporary performance drop. The underlying rule for correct classification changes.
 
-### Outcome
+## Retention
 
-- `cnt`
+The previously trained agent retains strong performance on Task A at the moment the environment changes. This matters because the evidence is not simply showing that the model failed generally. It still has prior capability.
 
-### Categorical predictors
+## New Learning
 
-- `season`
-- `yr`
-- `mnth`
-- `hr`
-- `holiday`
-- `weekday`
-- `workingday`
-- `weathersit`
+After the change, the previously trained agent does improve on Task B, so it is not completely unable to learn. However, the improvement is weaker than the fresh model's improvement. This supports the narrower idea that continued learning capacity can be reduced even when old knowledge is retained.
 
-### Numeric predictors
+## Rate
 
-- `temp`
-- `atemp`
-- `hum`
-- `windspeed`
+The fresh Task B model reaches the 80 percent Task B accuracy threshold earlier than the stability-biased agent. In this experiment, learning rate after the change is therefore an important part of the evidence. A lower immediate Task B score alone would not be enough to diagnose plasticity loss; the trajectory after the change is what matters.
 
-## Variables intentionally excluded
+## Tradeoff
 
-The following variables should **not** be used as predictors:
+The stability-biased agent preserves more of its Task A solution but pays for that stability with weaker Task B adaptation. The fresh model has no Task A capability to preserve, so it can move more freely toward the new rule. The result illustrates the tradeoff between retaining old behavior and adapting to new conditions.
 
-- `instant` — row identifier;
-- `dteday` — used to establish chronology rather than as a direct predictor;
-- `casual` — component of the outcome;
-- `registered` — component of the outcome.
+# 7. Compare
 
-The UCI documentation defines `cnt` as the total of casual and registered users. Including either component as a predictor would provide the model with information that is effectively part of the answer.
+| Evidence | Expected Pattern From Claim | Proxy Replication Result |
+|---|---|---|
+| Retention of old capability | Previously trained model should retain some prior capability | Observed: Task A performance remains high before adaptation |
+| New learning after change | Previously trained model may learn the new condition less effectively | Observed: Task B learning is slower and weaker than the fresh model |
+| Rate of improvement | Plasticity loss should appear in the post-change trajectory | Observed: fresh model reaches the Task B threshold earlier |
+| Tradeoff | Stability can preserve old behavior while limiting adaptation | Observed: stability-biased agent retains Task A but adapts less to Task B |
 
-> **Evaluation design matters—but so does information legitimacy.**
+The proxy replication aligns with the conceptual pattern from the Week 4 claim. The previously trained agent did not simply experience a one-time performance drop; it showed a different learning trajectory after the change. Because this experiment is synthetic and simplified, the numerical results should not be treated as directly comparable to the original literature. The meaningful comparison is the pattern: prior capability was retained, but subsequent adaptation was weaker than for a fresh learner.
 
-# Reproducibility Workflow
+# 8. Reproducibility Check
 
-Use the GitHub repository created from the course template.
+- [x] Data source documented
+- [x] Code runs from beginning to end
+- [x] Computational environment identified
+- [x] Software/packages documented
+- [x] Random seed documented
+- [x] Key preprocessing steps documented
+- [x] Evaluation procedure documented
+- [x] Repository README provides reproduction instructions
 
-Your workflow should be:
+The greatest reproducibility challenge is that this is a proxy replication rather than a direct reproduction of an original experiment. The advantage is that the synthetic setup is transparent and reproducible. The limitation is that the model, data, and stability mechanism are simplified, so the results support only a narrow version of the broader stability-plasticity claim.
 
-```text
-Course Template
-      ↓
-Your GitHub Repository
-      ↓
-Clone Locally
-      ↓
-Run Analysis
-      ↓
-Complete This Quarto Document
-      ↓
-Render to Word
-      ↓
-Review and Revise
-      ↓
-Commit and Push
-      ↓
-Submit .docx in Canvas
-```
+# 9. Extend
 
-You may complete the analysis using **Python or R**. You are not required to use both languages.
-
-# Research Claim
-
-Before examining the results, formulate the broad claim that this laboratory is testing.
-
-## Your Initial Claim
-
-**Your response:**
-
-I think Random Forest will do better than Ridge Regression for predicting bike rentals. Bike demand seems like it would have a lot of nonlinear stuff going on, like rush hour spikes, weekend vs. weekday differences, weather interactions, etc. A linear model probably can't capture all of that. I'm less sure about what happens when you change the evaluation design though. If you split by time instead of randomly, I wonder if the advantage shrinks because the model has to predict conditions it hasn't seen before.
-
-# Predict Before You Inspect
-
-Before running the analysis, record your expectations.
-
-## Prediction 1 — Estimated Performance
-
-Do you expect RMSE and MAE to be similar or different under random and temporal evaluation? Why?
-
-**Your response:**
-
-I'd expect errors to go up under temporal evaluation. With a random split, the model gets to see data from all time periods during training, so the test set isn't really "new" in a meaningful way. But with a temporal split you're asking the model to predict months it literally never trained on. That seems harder. I'm guessing both RMSE and MAE will be noticeably worse, but I'm not sure by how much.
-
-## Prediction 2 — Model Ranking
-
-Do you expect the stronger model to remain the same under both evaluation designs? Why or why not?
-
-**Your response:**
-
-I think Random Forest probably stays the stronger model in both cases. It's just a more flexible algorithm. Ridge might close the gap a little under temporal evaluation since simpler models sometimes generalize more conservatively, but I'd be surprised if the ranking actually flipped. My prediction is same ranking, smaller margin.
-
-> Your prediction is not graded on whether it turns out to be correct. The purpose is to make your prior reasoning visible before you inspect the evidence.
-
-# Replicate the Analysis
-
-Run the analysis script for the language you selected.
-
-## Python Track
-
-Run:
-
-```text
-python .\python\lab01_analysis.py
-```
-
-## R Track
-
-Run:
-
-```text
-Rscript .\r\lab01_analysis.R
-```
-
-If you use RStudio, you may instead open the R script and run it interactively.
-
-Your analysis should:
-
-1. acquire or access the dataset reproducibly;
-2. establish chronological order;
-3. define the prediction outcome and predictors;
-4. fit the same two models under both evaluation designs;
-5. calculate RMSE and MAE;
-6. display model rankings; and
-7. preserve enough information for another researcher to reproduce your analysis.
-
-# Record Your Results
-
-Complete the table below using the output generated by your analysis.
-
-| Evaluation Design | Model | RMSE | MAE |
-|---|---|---:|---:|
-| Random | Ridge Regression | 1087.24 | 745.13 |
-| Random | Random Forest | 789.56 | 523.47 |
-| Temporal | Ridge Regression | 1398.71 | 912.34 |
-| Temporal | Random Forest | 1624.89 | 1056.78 |
-
-Do not interpret the results yet. First record what the analysis actually produced.
-
-# FAIR Model Comparison Audit
-
-Use the **FAIR Model Comparison Audit** to evaluate what the evidence means.
-
-## F — Frame
-
-**What exactly is being compared?**
-
-Address all of the following:
-
-- What is the prediction problem?
-- What is the outcome?
-- Which two models are being compared?
-- What remains constant across the two evaluation designs?
-- What is the main methodological condition that changes?
-
-**Your response:**
-
-We're predicting how many bikes get rented each hour (`cnt`) using weather variables (temperature, humidity, wind speed) and calendar info (season, month, hour, whether it's a holiday, etc.). The two models are Ridge Regression and Random Forest. The dataset, predictors, outcome, and metrics all stay the same across both conditions. The only thing that changes is the split: random evaluation shuffles everything and takes a random 80/20 split, while temporal evaluation uses the first 80% of the data chronologically for training and the last 20% for testing.
-
-# A — Align
-
-**Are the model comparisons fair within each evaluation design?**
-
-Consider:
-
-- Are the models evaluated on the same outcome?
-- Are they given the same predictor information?
-- Are the same performance metrics used?
-- Is preprocessing applied consistently?
-- Is the test set untouched during model fitting?
-- Is anything besides the evaluation design changing in a way that could confound your comparison?
-
-**Your response:**
-
-Yeah, the comparison looks fair to me. Both models get the same predictors, same outcome variable, same preprocessing. The preprocessing is only fit on training data so there's no data leakage issue. Nothing changes between the two conditions except the split method, which is the whole point of the experiment.
-
-# I — Inspect
-
-**What do RMSE and MAE show?**
-
-First, explain each metric briefly in the context of this prediction problem.
-
-## RMSE
-
-**Your response:**
-
-RMSE measures prediction error but it weights bigger mistakes more heavily because of the squaring step. So if the model is way off on a few peak-hour predictions, that pulls RMSE up a lot. Lower is better. In this context an RMSE of ~1,087 means predictions are roughly off by that many rentals per hour on average (though the squaring makes it a bit more nuanced than that).
-
-## MAE
-
-**Your response:**
-
-MAE is simpler to interpret. It's just the average of how far off each prediction is, without any squaring. So an MAE of 745 means the model is typically wrong by about 745 rentals per hour. It doesn't punish outlier errors as much as RMSE does. Lower is better here too.
-
-## Performance Comparison
-
-Now compare the results.
-
-Address all of the following:
-
-1. Which model performs better under random evaluation?
-2. Which model performs better under temporal evaluation?
-3. How much does each model's RMSE change between evaluation designs?
-4. How much does each model's MAE change between evaluation designs?
-5. Is one model more sensitive to the change in evaluation design than the other?
-
-You may calculate absolute or percentage changes where helpful.
-
-**Your response:**
-
-Random Forest wins pretty easily under random evaluation (RMSE 789.56 vs 1,087.24 for Ridge). MAE tells the same story there.
-
-But under temporal evaluation it's the opposite. Ridge gets an RMSE of 1,398.71 and Random Forest shoots up to 1,624.89. So the ranking completely reverses.
-
-The thing that really jumped out to me is that Random Forest's RMSE basically doubles when you switch evaluation designs (789 to 1,624). Ridge goes up too, from 1,087 to 1,399, but that's way less dramatic. Random Forest seems to be learning patterns that are specific to the time periods in training and don't transfer well to new time periods.
-
-# R — Review
-
-**Does the conclusion change when the evaluation design changes?**
-
-Distinguish between at least two kinds of conclusions:
-
-### Conclusion about model ranking
-
-Does the identity of the stronger model change?
-
-**Your response:**
-
-Yes. Random Forest is the winner under random evaluation, Ridge is the winner under temporal. Complete reversal. If someone only ran one version of this experiment they'd reach the wrong conclusion about which model to use.
-
-### Conclusion about expected predictive performance
-
-Does the estimated level of performance change?
-
-**Your response:**
-
-Definitely. Both models perform worse under temporal evaluation. Random Forest's RMSE more than doubles, and even Ridge goes up by about 300 points. If you used random evaluation numbers to set expectations for how the model would perform in production, you'd be way too optimistic. The temporal numbers are closer to what you'd actually see.
-
-### Conclusion about deployment
-
-Which evaluation design better represents a situation in which a model is trained on historical observations and then used to predict future observations? Explain.
-
-**Your response:**
-
-Temporal, for sure. In the real world a bike-share company trains on historical data and then predicts future demand. They don't get to randomly sample from the future. Random evaluation mixes future data into training, which is unrealistic. If I had to recommend a model to actually deploy based on this analysis, I'd go with Ridge even though it looked worse in the random evaluation.
-
-# Diagnose the Difference
-
-Now move beyond reporting numbers.
-
-Why might random and temporal evaluation produce different estimates of predictive performance?
-
-Your discussion should consider at least three of the following:
-
-- temporal ordering;
-- changes in demand over time;
-- changing relationships between predictors and the outcome;
-- seasonality;
-- distribution shift;
-- the difference between interpolating within a historical mixture and predicting later observations;
-- whether the test set resembles the situation in which the model would actually be deployed.
-
-**Your response:**
-
-I think there are a few things going on here.
-
-First, seasonality. Bike demand is super seasonal and when you randomly split the data, both training and test have a nice mix of all seasons. The model gets to "cheat" a little because it's seen similar seasonal conditions in training. With temporal evaluation, the test set is mostly fall/winter 2012, and those months might behave differently from what was in training. Random Forest in particular can memorize very specific seasonal patterns that don't transfer to new time periods.
-
-Second, there's an interpolation vs. extrapolation thing happening. Random evaluation is basically asking the model to fill in gaps within data it already knows about. Temporal evaluation is asking it to predict into time periods it's never seen. Decision trees can't really extrapolate beyond the range of their training data, they can only output values they've observed. Ridge Regression at least has a linear structure that can extend beyond the training range in a reasonable way.
-
-Third, the bike-share program was probably growing over this period (2011-2012). So demand in later months might just be higher overall, not because of weather but because more people know about the service. If that's true, a model trained on earlier data would systematically underpredict later demand. Ridge might handle this trend better because it's fitting a simpler relationship that picks up on the general upward direction.
-
-# Reconsider the Original Claim
-
-Return to the claim you wrote before examining the results.
-
-Rewrite it so that it reflects the evidence produced by both evaluation designs.
-
-Your revised claim should distinguish between:
-
-- **relative model performance** — which model performs better; and
-- **absolute or expected predictive performance** — how well the model is estimated to perform.
-
-Avoid statements that go beyond the evidence.
-
-**Revised claim:**
-
-Looking back, my original claim was too simple. Random Forest does beat Ridge under random evaluation, so that part was right. But under temporal evaluation, which is really what matters for deployment, Ridge actually wins. So I can't just say "Random Forest is better" without specifying the evaluation design. It depends.
-
-Also, both models are way worse under temporal evaluation than random evaluation would suggest. If you're trying to set realistic expectations for how the model will perform in production, you should be looking at the temporal numbers, not the random ones. The random evaluation numbers are misleadingly optimistic.
+A useful extension would be to repeat the experiment across many random seeds and several degrees of environmental change. The current experiment uses one fixed change from Task A to Task B. A stronger study would test whether the same pattern appears when the new task is only slightly different, moderately different, or strongly conflicting with the old task. This would show whether reduced plasticity emerges only under severe nonstationarity or whether it also appears under smaller shifts. The extension would support a more precise claim about when stability begins to interfere with continued learning.
 
 # Replication Verdict
 
-Select **one** verdict.
+**Selected verdict:** Partially Reproduced.
 
-- **Reproduced**
-- **Partially Reproduced**
-- **Not Reproduced**
-- **Inconclusive**
-
-Your verdict should refer to the claim you investigated—not whether your numbers happen to match another student's numbers exactly.
-
-## Verdict
-
-**Selected verdict:** Partially Reproduced
-
-## Defense of Verdict
-
-The main finding here, that evaluation design changes the evidence, came through really clearly. The ranking reversed completely and both RMSE and MAE agreed on that, so it's not ambiguous.
-
-I was wrong about the ranking staying the same though. I thought the gap would narrow but Random Forest would still be on top. Instead it flipped entirely, and I definitely didn't expect Random Forest's RMSE to basically double. So my prediction about the direction was right (temporal would be harder) but I got the magnitude and the ranking wrong.
-
-I'm going with "Partially Reproduced" because my claim that Random Forest is the better model only holds under random evaluation. Under the evaluation design that actually matters for deployment, it doesn't hold. The bigger methodological point about evaluation design being consequential is well supported though.
-
-# Extension — What Would You Test Next?
-
-Replication should not end with reproduction. Good replication work reveals the next research question.
-
-Propose **one defensible extension** to this laboratory.
-
-Examples might include:
-
-- rolling or expanding-window validation;
-- a different temporal cutoff;
-- repeated temporal evaluation;
-- additional models;
-- model calibration or prediction intervals;
-- feature stability across time;
-- subgroup performance;
-- a different operational definition of the prediction horizon;
-- explicitly modeling trend or seasonality.
-
-Do not simply list an idea. Explain:
-
-1. what you would change;
-2. why it matters;
-3. what new evidence it would produce; and
-4. what research claim that evidence could support.
-
-**Your response:**
-
-I'd want to try rolling-window validation. Instead of one big temporal split, you train on months 1-4 and test on month 5, then train on months 1-5 and test on month 6, and keep going. That way you get multiple temporal test windows instead of just one.
-
-Right now we only have one temporal split, so maybe Random Forest just happened to struggle with those specific test months. Or maybe it always struggles when asked to predict forward in time. We can't tell. Rolling-window would show whether Ridge's advantage is consistent or just a quirk of this particular cutpoint.
-
-It would also let you see if there are season-specific patterns, like whether Random Forest does fine predicting spring from winter data but falls apart predicting fall from summer data. You could build a much stronger claim about when and why model ranking depends on evaluation design.
-
-# Claim Boundary
-
-Complete the following statements.
-
-## What the evidence supports
-
-> Based on this laboratory, the evidence supports the claim that evaluation design changes which model looks better and how well it appears to perform. For this forecasting problem, temporal evaluation gave different and probably more realistic results than random evaluation.
-
-## What the evidence does not support
-
-> Based on this laboratory, the evidence does not support the claim that Random Forest is always the better model for this problem, or that random evaluation gives you a good estimate of how a model will actually perform on future data. We also can't say from one temporal split whether these findings would hold with different cutoff points or time windows.
-
-# Researcher Takeaway
-
-Honestly the biggest takeaway for me is that how you split your data can completely change your conclusions. Same data, same models, same metrics, opposite answers about which model is better. Before this lab I would have just done a random train/test split without thinking too hard about it. Now I realize that for anything involving time, you really need the test set to look like what the model will actually face when deployed. Otherwise you might pick the wrong model and also be way too confident about how well it'll work.
-
-# Reproducibility Check
-
-Before submitting, confirm each item.
-
-- [ ] I created my repository from the official ANLY 735 template.
-- [ ] I used either the Python or R analysis track.
-- [ ] I ran the analysis successfully.
-- [ ] I did not manually alter results.
-- [ ] I recorded RMSE and MAE from my own analysis.
-- [ ] I compared both evaluation designs.
-- [ ] I completed the FAIR Model Comparison Audit.
-- [ ] I provided a replication verdict supported by evidence.
-- [ ] I distinguished model ranking from estimated predictive performance.
-- [ ] I proposed a defensible extension.
-- [ ] I rendered this Quarto document to Word.
-- [ ] I reviewed the rendered document before submission.
-- [ ] I committed and pushed my completed source files to GitHub.
-- [ ] I submitted the final `.docx` file in Canvas.
-
-# Submission Requirements
-
-Submit the **rendered Word document (`.docx`)** to Canvas.
-
-Your GitHub repository serves as the reproducibility record for your analysis, code, Quarto source, and research decisions.
-
-Unless your instructor explicitly requests otherwise, do not submit raw scripts separately in Canvas.
-
-# Evaluation
-
-This laboratory is worth **20 points**.
-
-Your work will be evaluated on the quality of your:
-
-- reproducible analytical workflow;
-- evidence-based comparison;
-- interpretation of RMSE and MAE;
-- FAIR Model Comparison Audit;
-- reasoning about evaluation design;
-- replication verdict;
-- claim boundaries; and
-- research extension.
-
-The goal is not to obtain a predetermined set of numbers.
-
-> **Do not chase identical numbers. Investigate reproducibility.**
+The central pattern was partially reproduced in a controlled proxy setting: the previously trained agent retained prior Task A capability but adapted to Task B more slowly and less completely than a fresh model. The verdict is partial because the experiment tests a simplified version of the Week 4 claim rather than directly reproducing the full original study or survey evidence.
 
 # References
 
-Fanaee-T, H., & Gama, J. (2014). Event labeling combining ensemble detectors and background knowledge. *Progress in Artificial Intelligence, 2*, 113–127. https://doi.org/10.1007/s13748-013-0040-3
-
-UCI Machine Learning Repository. (n.d.). *Bike Sharing dataset*. https://archive.ics.uci.edu/dataset/275/bike+sharing+dataset
+::: {#refs}
+:::
