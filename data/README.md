@@ -1,7 +1,7 @@
 # Data Directory
 
 Replication Laboratory #2 uses synthetic data generated directly by:
-
+ 
 ```text
 python/lab02_analysis.py
 ```
